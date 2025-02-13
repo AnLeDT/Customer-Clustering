@@ -1,0 +1,183 @@
+
+library(readr)
+library(tidyverse)
+library(ggplot2)
+library(factoextra)
+
+##2. Exploratory data analysis
+table_desc <- read_csv("tabledesc.csv")
+print(table_desc, n = 28)
+#Import data
+BankinCRMData <- read_csv("StrattonAEBankingCRM.csv")
+#extract infor
+names(BankinCRMData) #names of culumns
+str(BankinCRMData) #Structure of the tibble
+
+##3. Customer segmentation/clustering
+#Standardise all the variables
+scaled.crm <- scale(BankinCRMData)
+#Verify that all variables now have the same mean and variance
+#column-wise mean
+apply(scaled.crm,2,mean)
+#column-wisw standard deviation
+apply(scaled.crm, 2,sd)
+#Cluster analysis
+set.seed(123)
+k4 <- kmeans(scaled.crm, 4, nstart = 10)
+
+#Inspect and understand the output of the k-means algorithm
+#Sum of squared distances of points in each cluster to the centroid (for each cluster)
+k4$withinss
+#Total (over all cluster) Sum of squared distances
+k4$tot.withinss
+sum(k4$withinss)
+#Total variability in the data
+k4$totss
+sum(scaled.crm**2)
+#Proportion of variability explained by the clustering
+k4$betweenss
+k4$betweenss/k4$totss
+#Cluster size
+k4[["size"]]
+#Clustering assignment
+k4$cluster
+#Centroids (stored as row-wise)
+k4$centers
+
+#Visualise
+sizes4k <- data.frame(Size = k4[["size"]], Cluster = paste("Cluster", c(1:4)))
+ggplot(sizes4k, aes(x = factor(Cluster), y = Size)) +
+  geom_col(fill = hcl(195,100,65)) +
+  geom_text(aes(label=Size), vjust=0) +
+  xlab("Cluster") + ylab("Size") +
+  ggtitle("Cluster sizes 4-means solution")
+
+#Build Cluster Specific Means for all Variables
+BankinCRMData$k4Cluster = k4[["cluster"]]
+
+#Group the data by cluster ID and then compute the mean values of numeric variables
+summarystats.percluster_4k = BankinCRMData %>%
+  group_by(k4Cluster) %>%
+  summarise_if(is.numeric, mean, na.rm = TRUE)
+#Inspect result
+head(summarystats.percluster_4k)
+
+#Plot Cluster for 4k solution (library factoextra)
+fviz_cluster(k4, scaled.crm, ellipse.type = "norm")
+
+##Repeat with k = 6
+
+
+##4. How to determine the right number of clusters
+#Elbow plot to determine optimal k
+set.seed(123456)
+fviz_nbclust(na.omit(scaled.crm), kmeans, method = "wss", k.max = 15, nstart = 10)
+#Silhouette plot to determine optimal k
+fviz_nbclust(na.omit(scaled.crm), kmeans, method = "silhouette", k.max = 15, nstart = 10)
+
+#Plot Cluster Solutions - k7
+StrattonCluster_7k <- kmeans(scaled.crm, 7, nstart = 15)
+fviz_cluster(StrattonCluster_7k, scaled.crm, ellipse.type = "norm")
+#Plot Cluster Solutions - k8
+StrattonCluster_8k <- kmeans(scaled.crm, 8, nstart = 15)
+fviz_cluster(StrattonCluster_8k, scaled.crm, ellipse.type = "norm")
+
+##5. Interprete of output
+#8 cluster k-mean cluster size plot
+sizes8k <- data.frame(Size = StrattonCluster_8k[["size"]],
+                      Cluster = paste("Cluster", c(1:8)))
+ggplot(sizes8k, aes(x=factor(Cluster), y = Size)) +
+  geom_col(fill=hcl(195,100,65)) +
+  xlab("") + ylab("Size") + geom_text(aes(label = Size), vjust=0) +
+  ggtitle("Cluster sizes 8-means solution")
+
+#Assemble with the original data
+#Add column to tibble
+BankinCRMData$k8Cluster = StrattonCluster_8k$cluster
+#Compute mean statistics of numerical variables (all vars are in this example)
+summarystats.percluster_8k = BankinCRMData %>%
+  group_by(k8Cluster) %>%
+  summarise_if(is.numeric, mean, na.rm = TRUE)
+#Barplot of service fees
+ggplot(summarystats.percluster_8k, aes(x=factor(k8Cluster), y = ServiceFees)) +
+  geom_col() +
+  xlab("Clusters") + ylab("Spending") +
+  geom_text(aes(label = round(ServiceFees, digits = 2)),
+            size = 3, colour = "white",
+            position = position_stack(vjust = 0.5)) +
+  ggtitle("Average Spending in Service Fees per Cluster")
+
+#Barplots of Fintech Investments
+Fintech <- summarystats.percluster_8k %>%
+  dplyr::select(k8Cluster,NFTs,Bitcoins) %>%
+  pivot_longer(!k8Cluster,names_to = "variable", values_to = "value")
+
+ggplot(Fintech,aes(factor(k8Cluster), value, col = factor(k8Cluster),
+                   fill = factor(k8Cluster))) +
+  geom_bar(stat = 'identity') + xlab('Cluster') +
+  facet_wrap(~variable, ncol = 1, scales = "free_y") +
+  geom_text(aes(label = round(value, digits = 1)), size = 2, colour = "white",
+            position = position_stack(vjust = 0.5)) +
+  ggtitle("Fintech Cluster Means")
+
+#Plots for Digital vs. Offline life
+Diglife = summarystats.percluster_8k %>%
+  dplyr::select(k8Cluster, BranchVisits, AppLogins, ATMVisits, TimeOnlineBanking,
+                SocialMediaInter, InternetTrafficVolume) %>%
+  pivot_longer(!k8Cluster, names_to = "variable", values_to = "value")
+
+ggplot(Diglife, aes(factor(k8Cluster), value, col = factor(k8Cluster), fill = factor(k8Cluster))) +
+  geom_bar(stat = 'identity') + xlab("Clusters") +
+  facet_wrap(~variable, ncol = 2, scales = "free_y") +
+  geom_text(aes(label = round(value, digits = 1)), size = 2, colour = "white",
+            position = position_stack(vjust = 0.5)) +
+  ggtitle("Digital Life vs. Offline Life Cluster Means")
+
+#Socio Economic Factors
+SocioEcon <- summarystats.percluster_8k %>%
+  dplyr::select(k8Cluster, Age, Income, HouseholdSize) %>%
+  pivot_longer(!k8Cluster, names_to = "variable", values_to = "value")
+
+ggplot(SocioEcon, aes(factor(k8Cluster), value, col = factor(k8Cluster), fill=factor(k8Cluster))) +
+  geom_bar(stat = 'identity') + xlab('Cluster') +
+  facet_wrap(~variable, ncol = 1, scales = "free_y") +
+  geom_text(aes(label = round(value, digits = 1)), size = 2, colour = "white",
+            position = position_stack(vjust = 0.5)) +
+  ggtitle('Socio_Economic CLuster Means')
+
+#Plots for investments
+Invest <- summarystats.percluster_8k %>%
+  dplyr::select(k8Cluster, MortageVolume, StockVolume, NASDAQInvest, USAXSFundInvest) %>%
+  pivot_longer(!k8Cluster, names_to = "variable", values_to = "value")
+
+ggplot(Invest, aes(factor(k8Cluster), value, col=factor(k8Cluster), fill = factor(k8Cluster))) +
+  geom_bar(stat = "identity") + xlab("CLuster") +
+  facet_wrap(~variable, ncol = 2, scales = "free_y") +
+  geom_text(aes(label = round(value, digits = 1)), size = 2, colour = "white",
+            position = position_stack(vjust = 0.5)) +
+  ggtitle("Investement Cluster Means")
+
+#Plots for Spending
+Spending <- summarystats.percluster_8k %>%
+  dplyr::select(k8Cluster, AccountSpending, CreditCardSpending, GrocerySpending) %>%
+  pivot_longer(!k8Cluster, names_to = "variable", values_to = "value")
+
+ggplot(Spending, aes(factor(k8Cluster), value, col=factor(k8Cluster), fill = factor(k8Cluster))) +
+  geom_bar(stat = "identity") + xlab("CLuster") +
+  facet_wrap(~variable, ncol = 1, scales = "free_y") +
+  geom_text(aes(label = round(value, digits = 1)), size = 2, colour = "white",
+            position = position_stack(vjust = 0.5)) +
+  ggtitle("Spending Cluster Means")
+
+#Plots Residential Information
+Life <- summarystats.percluster_8k %>%
+  dplyr::select(k8Cluster, CityAreaSize, MeanCitySqFtPrice,
+                MeanCityHouseHoldSize, MeanCityIncome) %>%
+  pivot_longer(!k8Cluster, names_to = "variable", values_to = "value")
+
+ggplot(Life, aes(factor(k8Cluster), value, col=factor(k8Cluster), fill = factor(k8Cluster))) +
+  geom_bar(stat = "identity") + xlab("CLuster") +
+  facet_wrap(~variable, ncol = 2, scales = "free_y") +
+  geom_text(aes(label = round(value, digits = 1)), size = 2, colour = "white",
+            position = position_stack(vjust = 0.5)) +
+  ggtitle("Life Conditions Cluster Means")

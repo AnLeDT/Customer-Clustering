@@ -1,0 +1,29 @@
+﻿Variable,Description,Measurement
+Age,Customer Age,Age in Years
+Income,Household Net Income,Net Income in USD
+HouseholdSize,Number of People Living in Household,Integer number
+CityAreaSize,City or Main Area Population,Integer number
+MeanCityIncome,Average Income on ZIP-Code and Street Level ,Average Income in USD
+MeanCityHousePrize,Average House Prizes on ZIP-Code and Street Level from last 5 years,Average Prizes in USD
+MeanCityHouseholdSize,Average Household Size on ZIP-Code and Street Level from last 10 years,Average Number Inhabitants
+MeanCitySqFtPrice,Average Prizes per Square Foot on ZIP-Code and Street Level ,Yes/No
+NumbCars ,Number of registered cars of customer,Number of Cars
+InternetTrafficVolume,Volume of Internet Traffic per customer household,GB
+MortageVolume,Mortage to be paid by Customer,USD
+AccountSpending,Monthly average spending from bank account,USD
+CreditCardSpending,Monthly average spending from Credit Card,USD
+HelpHotlineTime,Number of Minutes with Banking Hotline,Minutes
+CustomerSince,Time since opening bank account,Months
+GrocerySpending,Average grocery related spendings from bank account,USD
+StockVolume,Stock Investment,USD
+CreditVolume,Credits with the bank,USD
+NASDAQInvest,Amount of money invested in NASDAQ listed companies,USD
+USAXSFundInvest,Amount of money invested in Stratton owned share fund for mid sized US companies,USD
+BranchVisits,Number of recorded branch visits within the last 8 weeks,Integer number
+AppLogins,Number of customer logins in mobile banking app within the last 8 weeks,Integer number
+ATMVisitis,Number of times customer used an ATM service point within the last 8 weeks,Integer number
+TimeOnlineBanking,Time logged into the Online Banking System ,Minutes
+ServiceFees,Extra Fees paid for banking services,USD
+SocialMediaInter,Number of Finance Specific Social Media Profiles a customer follows,Integer number
+Bitcoins,Number of Bitcoins hold by customer,Number
+NFT,Number of NFTs bought by customer  ,Integer number
