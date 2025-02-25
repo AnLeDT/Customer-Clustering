@@ -1,26 +1,28 @@
-
+#Import necessary libraries
 library(readr)
 library(tidyverse)
 library(ggplot2)
 library(factoextra)
 
-##2. Exploratory data analysis
+##1. Exploratory data analysis
+#Import the description of variables in the customer database
 table_desc <- read_csv("tabledesc.csv")
+#View description
 print(table_desc, n = 28)
-#Import data
+#Import customer database
 BankinCRMData <- read_csv("StrattonAEBankingCRM.csv")
-#extract infor
+#Extract information of the database
 names(BankinCRMData) #names of culumns
 str(BankinCRMData) #Structure of the tibble
 
-##3. Customer segmentation/clustering
+##2. Customer segmentation/clustering
 #Standardise all the variables
 scaled.crm <- scale(BankinCRMData)
 #Verify that all variables now have the same mean and variance
-#column-wise mean
-apply(scaled.crm,2,mean)
-#column-wisw standard deviation
-apply(scaled.crm, 2,sd)
+#Compute column-wise mean
+apply(scaled.crm,2,mean) #all column-wise mean should be 0
+#Compute column-wise standard deviation
+apply(scaled.crm, 2,sd) #all column-wise sd should be 1
 #Cluster analysis
 set.seed(123)
 k4 <- kmeans(scaled.crm, 4, nstart = 10)
@@ -29,15 +31,13 @@ k4 <- kmeans(scaled.crm, 4, nstart = 10)
 #Sum of squared distances of points in each cluster to the centroid (for each cluster)
 k4$withinss
 #Total (over all cluster) Sum of squared distances
-k4$tot.withinss
-sum(k4$withinss)
+k4$tot.withinss # = sum(k4$withinss)
 #Total variability in the data
-k4$totss
-sum(scaled.crm**2)
+k4$totss # = sum(scaled.crm**2)
 #Proportion of variability explained by the clustering
 k4$betweenss
 k4$betweenss/k4$totss
-#Cluster size
+#Cluster sizes
 k4[["size"]]
 #Clustering assignment
 k4$cluster
@@ -45,13 +45,24 @@ k4$cluster
 k4$centers
 
 #Visualise
+#create dataframe for visualisation
 sizes4k <- data.frame(Size = k4[["size"]], Cluster = paste("Cluster", c(1:4)))
+#plot
 ggplot(sizes4k, aes(x = factor(Cluster), y = Size)) +
-  geom_col(fill = hcl(195,100,65)) +
-  geom_text(aes(label=Size), vjust=0) +
+  geom_col(fill = "#00A99D", width = 0.6) +  # Adjusted color and bar width
+  geom_text(aes(label = Size), vjust = -0.5, size = 5, fontface = "bold") +  # Better label positioning
   xlab("Cluster") + ylab("Size") +
-  ggtitle("Cluster sizes 4-means solution")
-
+  ggtitle("Cluster Sizes (4-Means Solution)") +
+  theme_minimal(base_size = 14) +  # Improved theme for readability
+  theme_gray(base_size = 14) +
+  theme(
+    plot.title = element_text(hjust = 0.5, face = "bold", size = 16),  # Centered and bold title
+    axis.text.x = element_text(size = 12, face = "bold"),
+    axis.text.y = element_text(size = 12),
+    axis.title.x = element_text(size = 14, face = "bold"),
+    axis.title.y = element_text(size = 14, face = "bold")
+  )
+ggsave("plot4k.png", width = 10, height = 5, dpi = 300)
 #Build Cluster Specific Means for all Variables
 BankinCRMData$k4Cluster = k4[["cluster"]]
 
@@ -63,24 +74,84 @@ summarystats.percluster_4k = BankinCRMData %>%
 head(summarystats.percluster_4k)
 
 #Plot Cluster for 4k solution (library factoextra)
-fviz_cluster(k4, scaled.crm, ellipse.type = "norm")
+clusterplot_4k <- fviz_cluster(k4, scaled.crm, ellipse.type = "norm")
+ggsave("cluster_plot_4k.png", clusterplot_4k, width = 10, height = 6, dpi = 300)
 
 ##Repeat with k = 6
 
 
-##4. How to determine the right number of clusters
+##4. Determine the right number of clusters
 #Elbow plot to determine optimal k
-set.seed(123456)
+set.seed(1234)
 fviz_nbclust(na.omit(scaled.crm), kmeans, method = "wss", k.max = 15, nstart = 10)
 #Silhouette plot to determine optimal k
 fviz_nbclust(na.omit(scaled.crm), kmeans, method = "silhouette", k.max = 15, nstart = 10)
 
 #Plot Cluster Solutions - k7
-StrattonCluster_7k <- kmeans(scaled.crm, 7, nstart = 15)
-fviz_cluster(StrattonCluster_7k, scaled.crm, ellipse.type = "norm")
+StrattonCluster_7k <- kmeans(scaled.crm, 7, nstart = 10)
+clusterplot_7k <- fviz_cluster(StrattonCluster_7k, scaled.crm, ellipse.type = "norm")
+ggsave("cluster_plot_7k.png", clusterplot_7k, width = 10, height = 6, dpi = 300)
+#Inspect and understand the output of the k-means algorithm
+#Sum of squared distances of points in each cluster to the centroid (for each cluster)
+StrattonCluster_7k$withinss
+#Total (over all cluster) Sum of squared distances
+StrattonCluster_7k$tot.withinss # = sum(k4$withinss)
+#Total variability in the data
+StrattonCluster_7k$totss # = sum(scaled.crm**2)
+#Proportion of variability explained by the clustering
+StrattonCluster_7k$betweenss
+StrattonCluster_7k$betweenss/StrattonCluster_7k$totss
+#Cluster sizes
+StrattonCluster_7k[["size"]]
+#Clustering assignment
+StrattonCluster_7k$cluster
+#Centroids (stored as row-wise)
+StrattonCluster_7k$centers
+
+
 #Plot Cluster Solutions - k8
-StrattonCluster_8k <- kmeans(scaled.crm, 8, nstart = 15)
-fviz_cluster(StrattonCluster_8k, scaled.crm, ellipse.type = "norm")
+StrattonCluster_8k <- kmeans(scaled.crm, 8, nstart = 10)
+clusterplot_8k <- fviz_cluster(StrattonCluster_8k, scaled.crm, ellipse.type = "norm")
+ggsave("cluster_plot_8k.png", clusterplot_8k, width = 10, height = 6, dpi = 300)
+#Inspect and understand the output of the k-means algorithm
+#Sum of squared distances of points in each cluster to the centroid (for each cluster)
+StrattonCluster_8k$withinss
+#Total (over all cluster) Sum of squared distances
+StrattonCluster_8k$tot.withinss # = sum(k4$withinss)
+#Total variability in the data
+StrattonCluster_8k$totss # = sum(scaled.crm**2)
+#Proportion of variability explained by the clustering
+StrattonCluster_8k$betweenss
+StrattonCluster_8k$betweenss/StrattonCluster_8k$totss
+#Cluster sizes
+StrattonCluster_8k[["size"]]
+#Clustering assignment
+StrattonCluster_8k$cluster
+#Centroids (stored as row-wise)
+StrattonCluster_8k$centers
+
+
+#Plot Cluster Solutions - k6
+StrattonCluster_6k <- kmeans(scaled.crm, 6, nstart = 10)
+clusterplot_6k <- fviz_cluster(StrattonCluster_6k, scaled.crm, ellipse.type = "norm")
+ggsave("cluster_plot_6k.png", clusterplot_6k, width = 10, height = 6, dpi = 300)
+#Inspect and understand the output of the k-means algorithm
+#Sum of squared distances of points in each cluster to the centroid (for each cluster)
+StrattonCluster_6k$withinss
+#Total (over all cluster) Sum of squared distances
+StrattonCluster_6k$tot.withinss # = sum(k4$withinss)
+#Total variability in the data
+StrattonCluster_6k$totss # = sum(scaled.crm**2)
+#Proportion of variability explained by the clustering
+StrattonCluster_6k$betweenss
+StrattonCluster_6k$betweenss/StrattonCluster_6k$totss
+#Cluster sizes
+StrattonCluster_6k[["size"]]
+#Clustering assignment
+StrattonCluster_6k$cluster
+#Centroids (stored as row-wise)
+StrattonCluster_6k$centers
+
 
 ##5. Interprete of output
 #8 cluster k-mean cluster size plot
@@ -90,7 +161,7 @@ ggplot(sizes8k, aes(x=factor(Cluster), y = Size)) +
   geom_col(fill=hcl(195,100,65)) +
   xlab("") + ylab("Size") + geom_text(aes(label = Size), vjust=0) +
   ggtitle("Cluster sizes 8-means solution")
-
+ggsave("plot8k.png", width = 10, height = 5, dpi = 300)
 #Assemble with the original data
 #Add column to tibble
 BankinCRMData$k8Cluster = StrattonCluster_8k$cluster
